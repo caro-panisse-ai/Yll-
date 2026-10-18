@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yll — ficción interactiva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bar-bg: #17120f;
+    --bar-bg2: #1f1712;
+    --candle: #c98a4b;
+    --candle-dim: #7a5530;
+    --screen: #6fd7e8;
+    --screen-dim: #2c5a63;
+    --cream: #ece3d4;
+    --cream-dim: #a89985;
+    --line: #3a2f26;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(ellipse 90% 60% at 50% 0%, var(--bar-bg2) 0%, var(--bar-bg) 60%);
+    color: var(--cream);
+    font-family: 'Source Serif 4', serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding: 6vh 20px 10vh;
+  }
+  .stage{
+    max-width: 620px;
+    width:100%;
+  }
+  .kicker{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--screen-dim);
+    margin: 0 0 6px;
+  }
+  h1{
+    font-family:'Source Serif 4', serif;
+    font-weight:600;
+    font-size: 26px;
+    color: var(--candle);
+    margin: 0 0 30px;
+    letter-spacing: 0.01em;
+  }
+  .node-title{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--cream-dim);
+    margin: 0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .node-title .dot{
+    width:6px;height:6px;border-radius:50%;
+    background: var(--candle);
+    box-shadow: 0 0 8px 1px var(--candle);
+    flex-shrink:0;
+  }
+  .text{
+    font-size: 18px;
+    line-height: 1.75;
+    color: var(--cream);
+  }
+  .text p{ margin: 0 0 1.1em; }
+  .text p:last-child{ margin-bottom:0; }
+  .glow{
+    color: var(--screen);
+    text-shadow: 0 0 10px rgba(111,215,232,0.35);
+  }
+  .fragment{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--screen);
+    background: rgba(111,215,232,0.06);
+    border-left: 2px solid var(--screen-dim);
+    padding: 10px 16px;
+    margin: 1.3em 0;
+    line-height:1.6;
+  }
+  .choices{
+    margin-top: 34px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  button.choice{
+    all:unset;
+    cursor:pointer;
+    font-family:'Source Serif 4', serif;
+    font-size: 16px;
+    color: var(--cream);
+    background: rgba(201,138,75,0.06);
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--candle-dim);
+    padding: 12px 18px;
+    line-height:1.5;
+    transition: border-color 0.15s ease, background 0.15s ease, padding-left 0.15s ease;
+  }
+  button.choice:hover, button.choice:focus-visible{
+    border-left-color: var(--candle);
+    background: rgba(201,138,75,0.12);
+    padding-left: 22px;
+  }
+  button.choice .arrow{
+    color: var(--candle-dim);
+    margin-right:8px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .ending-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    color: var(--screen);
+    border: 1px solid var(--screen-dim);
+    display:inline-block;
+    padding: 4px 10px;
+    margin-top: 26px;
+  }
+  .restart{
+    margin-top: 28px;
+  }
+  .visited{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color: var(--cream-dim);
+    margin-top: 46px;
+    padding-top:16px;
+    border-top: 1px solid var(--line);
+    line-height:1.8;
+  }
+  .visited strong{ color: var(--candle-dim); font-weight:400; }
+  footer{
+    max-width:620px;
+    margin: 60px auto 0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--cream-dim);
+    text-align:center;
+    line-height:1.6;
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .text, .choices{ animation: fadein 0.5s ease; }
+    @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="kicker">ficción interactiva por nodos — prototipo</p>
+  <h1>Lo que Yll no pudo llevarse</h1>
+  <div id="node-title" class="node-title"></div>
+  <div id="text" class="text"></div>
+  <div id="choices" class="choices"></div>
+  <div id="visited" class="visited" style="display:none;"></div>
+</div>
+<footer>cada lector arma un recorrido distinto por el salón · ningún camino agota la historia</footer>
+
+<script>
+const nodes = {
+
+  inicio: {
+    title: "el salón",
+    html: `
+      <p>Esa noche Yll se acercó a la barra y le pidió al cantinero que le sirviera un trago. Cerveza, tal vez, fría, en lo posible.</p>
+      <p>—Frío no hay nada —le respondió la voz ronca del hombre, y le acercó un vaso sucio en el que vertió un líquido denso y transparente de una botella que volvió a guardar tras de sí, en un estante.</p>
+      <p>En una rápida mirada alrededor, Yll se sorprendió del silencio reinante a pesar de lo atestado que estaba el salón. Los parroquianos parecían dormidos, pero su vista estaba fija en unos <span class="glow">objetos rectangulares</span> que sostenían con las manos y de los que brotaba una luz tenue.</p>
+      <p>"En mi tierra —pensó Yll— los bares, las fiestas y las cenas familiares son momentos de música y conversación… me resulta tan raro todo esto."</p>
+    `,
+    choices: [
+      { label: "Acercarse a la mesa vecina y mirar esa luz de cerca", to: "mesa_vecina" },
+      { label: "Preguntarle al cantinero por qué nadie habla", to: "cantinero" },
+      { label: "Beber el trago y quedarse quieto, observando", to: "trago" },
+    ]
+  },
+
+  mesa_vecina: {
+    title: "la mesa vecina",
+    html: `
+      <p>Yll dio dos pasos hacia la mesa más próxima. Un hombre de barba gris sostenía el objeto con ambas manos, tan cerca de la cara que la luz le dibujaba sombras raras bajo los ojos. La pantalla —porque eso era, comprendió Yll, una pantalla— temblaba con símbolos que aparecían y desaparecían solos, sin que el hombre tocara nada.</p>
+      <p class="fragment">◇ mensaje nuevo · hace 3 min<br>◇ mensaje nuevo · hace 1 min<br>◇ 47 personas están viendo esto ahora</p>
+      <p>Nadie en la mesa levantó la vista. El hombre de la barba tampoco. Era como si el vaso frente a él, y Yll mismo, no estuvieran ahí.</p>
+    `,
+    choices: [
+      { label: "Inclinarse un poco más para leer lo que dice", to: "leer_pantalla" },
+      { label: "Apartar la vista, incómodo, y recorrer el resto del salón", to: "salon_general" },
+    ]
+  },
+
+  leer_pantalla: {
+    title: "el fragmento",
+    html: `
+      <p>Yll se inclinó lo suficiente como para distinguir las letras antes de que el hombre, sin mirarlo, girara apenas el hombro y le cerrara el paso. Pero alcanzó a leer una línea, solo una, antes de que la imagen cambiara:</p>
+      <p class="fragment">"...nadie guardó las actas del Concejo del año 40. se perdieron con el cambio de sistema. si alguien tiene una copia en papel, por favor..."</p>
+      <p>Yll no entendía del todo qué era un Concejo, ni qué año era el 40, pero entendía perfectamente esa frase: <em>nadie guardó</em>. Sintió, sin saber por qué, que había tropezado con algo importante y minúsculo a la vez — una grieta diminuta en la superficie de todo ese silencio.</p>
+    `,
+    choices: [
+      { label: "Quedarse pensando en esa frase — final de este recorrido", to: "final_fragmento" },
+      { label: "Volver la vista al salón general", to: "salon_general" },
+    ]
+  },
+
+  cantinero: {
+    title: "la barra",
+    html: `
+      <p>—¿Por qué nadie habla? —preguntó Yll, señalando con la barbilla hacia las mesas.</p>
+      <p>El cantinero levantó apenas los ojos, como si la pregunta lo cansara de antemano.</p>
+      <p>—Hablan —dijo—. Solo que no entre ellos.</p>
+      <p>Secó un vaso que ya estaba seco. Yll esperó, pero el hombre no parecía dispuesto a agregar nada más, hasta que, sin que se lo pidieran, murmuró:</p>
+      <p>—Antes de la Ruptura esto era distinto. Yo era chico, pero me acuerdo. Ahora ni me acuerdo bien de acordarme.</p>
+    `,
+    choices: [
+      { label: "Preguntar qué fue la Ruptura", to: "la_ruptura" },
+      { label: "No insistir, y mirar el resto del salón", to: "salon_general" },
+    ]
+  },
+
+  la_ruptura: {
+    title: "la Ruptura",
+    html: `
+      <p>El cantinero apoyó las dos manos sobre la barra, como si necesitara ese peso para hablar.</p>
+      <p>—Un día se cayeron los servidores grandes. Los que guardaban todo: fotos, cartas, quién le debía plata a quién, las recetas de mi abuela. Se suponía que eso no podía pasar nunca, así que nadie había guardado copia en otro lado. Total, ¿para qué? Total, siempre iba a estar.</p>
+      <p>—¿Y después? —preguntó Yll.</p>
+      <p>—Después la gente se acostumbró a no acordarse. Es más cómodo. Uno mira esa lucecita —dijo, señalando con el mentón hacia el salón— y no tiene que sostener nada en la cabeza. Ni pasado, ni presente. Nada pesa.</p>
+    `,
+    choices: [
+      { label: "Preguntarle si él guarda algo, en algún lado, de antes", to: "final_ruptura" },
+      { label: "Alejarse de la barra en silencio", to: "salon_general" },
+    ]
+  },
+
+  trago: {
+    title: "el trago",
+    html: `
+      <p>Yll levantó el vaso sucio y bebió. El líquido le quemó la garganta de una manera que no esperaba — no como el vino de las fiestas de su tierra, sino más parecido a tragar un carbón encendido que se apaga de a poco.</p>
+      <p>Por un instante, con los ojos entrecerrados, le pareció escuchar — muy lejos, muy adentro — una guitarra. Una voz de mujer cantando algo que él conocía de memoria, aunque no podía nombrar la canción. Una mesa larga, mucha gente, risas superpuestas unas con otras sin que nadie se callara nunca del todo.</p>
+      <p>Abrió los ojos. El salón seguía mudo. Las luces rectangulares seguían parpadeando en las manos de los otros.</p>
+    `,
+    choices: [
+      { label: "Cerrar los ojos de nuevo, tratando de retener el recuerdo", to: "recuerdo" },
+      { label: "Sacudir la cabeza y mirar alrededor del salón", to: "salon_general" },
+    ]
+  },
+
+  recuerdo: {
+    title: "lo que casi vuelve",
+    html: `
+      <p>Yll cerró los ojos con fuerza, como quien aprieta algo entre las manos para que no se le escape. Trató de escuchar mejor esa canción, de ponerle nombre a esa mesa larga, de reconocer alguna cara.</p>
+      <p>Pero cuanto más se esforzaba, más rápido se deshacía todo — como agua que se escapa entre los dedos apenas uno cierra el puño. Cuando quiso aferrarse a un detalle concreto, ya no quedaba nada: ni la canción, ni la mesa, ni siquiera la certeza de que había sido un recuerdo real y no algo que su cabeza inventó para no sentirse tan sola en ese salón silencioso.</p>
+    `,
+    choices: [
+      { label: "Aceptar que se perdió — final de este recorrido", to: "final_recuerdo" },
+      { label: "Abrir los ojos y mirar el resto del salón", to: "salon_general" },
+    ]
+  },
+
+  salon_general: {
+    title: "el salón, otra vez",
+    html: `
+      <p>Yll respiró hondo y recorrió el salón con la mirada, una vez más. Los mismos parroquianos, la misma luz tenue subiendo desde las manos, el mismo silencio compacto que ya empezaba a sentir menos como ausencia y más como una decisión colectiva.</p>
+      <p>Todavía quedaban cosas por mirar, por preguntar, por probar. O tal vez ya era momento de salir a la calle y dejar el bar atrás.</p>
+    `,
+    choices: [],
+  },
+
+  final_fragmento: {
+    title: "final — la grieta",
+    ending: true,
+    html: `
+      <p>Yll se quedó de pie, con la frase todavía dándole vueltas: <em>nadie guardó las actas</em>. Pensó en su tierra, en las historias que se contaban en las cenas familiares, repetidas tantas veces que ya nadie recordaba quién las había contado primero — y por primera vez entendió que esa repetición, ese aburrimiento de escuchar lo mismo cien veces, era en realidad una forma de guardar.</p>
+      <p>Acá, en cambio, cada cosa se decía una sola vez, le pasaba a una sola persona, y se apagaba con la pantalla. Yll no supo si lo que sentía era lástima o miedo. Tal vez las dos cosas se parecían más de lo que él creía.</p>
+    `,
+  },
+
+  final_ruptura: {
+    title: "final — lo que el cantinero guarda",
+    ending: true,
+    html: `
+      <p>El cantinero lo miró un largo rato antes de responder, como si nadie le hubiese hecho esa pregunta en años.</p>
+      <p>Se agachó detrás de la barra y sacó, de un cajón que crujió al abrirse, un cuaderno de tapas gastadas.</p>
+      <p class="fragment">receta de mi abuela: pan con manteca de cerdo y romero. horno bien caliente. no apurar la masa.</p>
+      <p>—Esto no se lo conté a nadie —dijo, cerrando el cuaderno—. Ni falta que hace. Con que exista, alcanza.</p>
+      <p>Yll entendió, entonces, que quizás no todo se había perdido: solo se había vuelto secreto, guardado a mano, lejos de cualquier luz que pudiera apagarse de golpe.</p>
+    `,
+  },
+
+  final_recuerdo: {
+    title: "final — lo que se deshizo",
+    ending: true,
+    html: `
+      <p>Yll abrió los ojos y aceptó, con una tristeza tranquila, que ese recuerdo ya no volvería completo. Quedaba apenas la sensación de que había existido: una mesa, una canción, gente que no se callaba nunca. Nada más concreto que eso.</p>
+      <p>Miró el salón silencioso una vez más y pensó que tal vez esto —esta pérdida chiquita, personal, de una sola noche— era lo mismo que le había pasado a todo ese lugar, pero multiplicado miles de veces, durante años, hasta que ya no quedó nadie que se acordara de acordarse.</p>
+    `,
+  },
+
+};
+
+let visitedOrder = [];
+
+function render(id){
+  const node = nodes[id];
+  if (!node) return;
+  visitedOrder.push(node.title);
+
+  document.getElementById('node-title').innerHTML =
+    `<span class="dot"></span>${node.title}`;
+  document.getElementById('text').innerHTML = node.html;
+
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+
+  if (node.ending) {
+    const tag = document.createElement('div');
+    tag.className = 'ending-tag';
+    tag.textContent = 'fin de este recorrido';
+    choicesEl.appendChild(tag);
+
+    const restartWrap = document.createElement('div');
+    restartWrap.className = 'restart';
+    const restartBtn = document.createElement('button');
+    restartBtn.className = 'choice';
+    restartBtn.innerHTML = `<span class="arrow">↺</span>Volver al salón y empezar otro recorrido`;
+    restartBtn.onclick = () => { visitedOrder = []; render('inicio'); };
+    restartWrap.appendChild(restartBtn);
+    choicesEl.appendChild(restartWrap);
+  } else if (node.choices.length === 0) {
+    // hub node with dynamic remaining options
+    const remaining = [
+      { key: 'mesa_vecina', label: 'Volver a mirar hacia la mesa vecina' },
+      { key: 'cantinero', label: 'Volver a hablar con el cantinero' },
+      { key: 'trago', label: 'Terminar lo que queda del trago' },
+    ].filter(opt => !visitedOrder.includes(nodes[opt.key].title));
+
+    remaining.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.innerHTML = `<span class="arrow">→</span>${opt.label}`;
+      btn.onclick = () => render(opt.key);
+      choicesEl.appendChild(btn);
+    });
+
+    const leaveBtn = document.createElement('button');
+    leaveBtn.className = 'choice';
+    leaveBtn.innerHTML = `<span class="arrow">→</span>Dejar el trago a medio terminar y salir a la calle`;
+    leaveBtn.onclick = () => render('final_salida');
+    choicesEl.appendChild(leaveBtn);
+
+  } else {
+    node.choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.innerHTML = `<span class="arrow">→</span>${choice.label}`;
+      btn.onclick = () => render(choice.to);
+      choicesEl.appendChild(btn);
+    });
+  }
+
+  const visitedEl = document.getElementById('visited');
+  if (visitedOrder.length > 1) {
+    visitedEl.style.display = 'block';
+    visitedEl.innerHTML = '<strong>recorrido:</strong> ' + visitedOrder.join(' · ');
+  } else {
+    visitedEl.style.display = 'none';
+  }
+
+  document.getElementById('text').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+nodes.final_salida = {
+  title: "final — la calle",
+  ending: true,
+  html: `
+    <p>Yll dejó unas monedas sobre la barra y salió sin terminar el trago. Afuera, el aire era más frío pero, por algún motivo, más liviano. Miró hacia atrás una sola vez: a través de la ventana empañada, las luces rectangulares seguían parpadeando en la oscuridad del salón, como luciérnagas que ya no se acuerdan de por qué brillan.</p>
+    <p>Yll no supo, esa noche, si lo que había visto era el futuro o apenas un rincón raro del presente. Pero caminó de vuelta a donde se hospedaba pensando que, llegara donde llegara después, iba a tratar de contar esto — en voz alta, más de una vez — para que a alguien, en algún lado, no se le escapara del todo.</p>
+  `,
+};
+
+render('inicio');
+</script>
+</body>
+</html>
